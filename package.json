@@ -1,0 +1,26 @@
+{
+    "name": "aws-test",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start-server": "node --env-file .env ./serverDist/server.js",
+        "build-server": "tsc"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "module",
+    "dependencies": {
+        "@aws-sdk/client-dynamodb": "^3.890.0",
+        "@aws-sdk/lib-dynamodb": "^3.890.0",
+        "express": "^5.1.0",
+        "zod": "^4.1.9"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.3",
+        "@types/node": "^24.5.1",
+        "typescript": "^5.9.2"
+    }
+}
