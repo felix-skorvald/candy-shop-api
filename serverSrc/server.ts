@@ -1,5 +1,6 @@
 import express from "express";
 import type { Express, Request, RequestHandler, Response } from "express";
+import cartRouter from "./routes/cart.js";
 import { router as userRouter } from "./routes/users.js";
 
 
