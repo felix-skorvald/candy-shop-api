@@ -15,8 +15,8 @@ app.use("/", logger);
 app.use(express.json());
 
 // Endpoints
-app.use("api/products", (DINROUTER) );
-app.use("api/users", (DINROUTER);
+//app.use("/api/products", productsRouter);
+//app.use("/api/users", usersRouter);
 app.use("/api/cart", cartRouter);
 
 //start
