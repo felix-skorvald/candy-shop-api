@@ -24,6 +24,10 @@ import { router as productsRouter } from "./routes/products.js";
 //app.use("/api/users", usersRouter);
 app.use("/api/cart", cartRouter);
 
+//app.use("/api/products", productsRouter);
+//app.use("/api/users", usersRouter);
+app.use("/api/cart", cartRouter);
+
 
 //start
 
