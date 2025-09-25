@@ -1,5 +1,6 @@
 import express from "express";
 import type { Express, Request, RequestHandler, Response } from "express";
+import { router as userRouter } from "./routes/users.js";
 
 
 const port: number = Number(process.env.PORT!);
@@ -14,9 +15,9 @@ app.use("/", logger);
 app.use(express.json());
 
 // Endpoints
-app.use("api/products, (DINROUTER) );
-app.use("api/users, (DINROUTER);
-app.use("api/cart, (DINROUTER);
+// app.use("api/products, (DINROUTER))
+app.use("/api/users", userRouter);
+// app.use("api/cart, (DINROUTER));
 
 //start
 
