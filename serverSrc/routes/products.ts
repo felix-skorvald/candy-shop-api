@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import type { Request, Response } from "express";
-import { GetCommand,ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
 
 const router: Router = express.Router();
@@ -31,9 +31,9 @@ router.get('/:productId', async (req: Request, res: Response) => {
 //all products
 router.get('/', async (req: Request, res: Response) => {
 	try {
-		const result = await db.send(new ScanCommand({
+		const result = await db.send(new QueryCommand({
 			TableName: "CandyShop",
-			FilterExpression: "pk = :pk",
+			KeyConditionExpression: "pk = :pk",
 			ExpressionAttributeValues: {
 				":pk": "PRODUCT"
 			}
