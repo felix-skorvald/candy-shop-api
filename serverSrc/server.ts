@@ -24,6 +24,7 @@ import { router as productsRouter } from "./routes/products.js";
 //app.use("/api/users", usersRouter);
 app.use("/api/cart", cartRouter);
 
+
 //start
 
 app.listen(port, () => {
