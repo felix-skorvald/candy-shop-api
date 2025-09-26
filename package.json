@@ -15,10 +15,12 @@
     "dependencies": {
         "@aws-sdk/client-dynamodb": "^3.890.0",
         "@aws-sdk/lib-dynamodb": "^3.890.0",
+        "dotenv": "^17.2.2",
         "express": "^5.1.0",
         "zod": "^4.1.9"
     },
     "devDependencies": {
+        "@types/dotenv": "^6.1.1",
         "@types/express": "^5.0.3",
         "@types/node": "^24.5.1",
         "typescript": "^5.9.2"
