@@ -1,13 +1,31 @@
 
-import { Router } from "express";
-import type { Request, Response } from "express";
-import { QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { Router, type Request, type Response } from "express";
+import { QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const router = Router();
+
+
+router.get("/", async (req: Request, res: Response) => {
+  try {
+    const command = new ScanCommand({
+      TableName: "CandyShop",
+      FilterExpression: "begins_with(sk, :sk)",
+      ExpressionAttributeValues: {
+        ":sk": "CART#",
+      },
+    });
+
+    const result = await db.send(command);
+    return res.status(200).json(result.Items ?? []);
+  } catch (error: any) {
+    console.error(" Error fetching all carts:", error.message);
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+});
 
 router.get("/:userId", async (req: Request, res: Response) => {
   const { userId } = req.params;
@@ -23,10 +41,10 @@ router.get("/:userId", async (req: Request, res: Response) => {
     });
 
     const result = await db.send(command);
-    res.status(200).json(result.Items || []);
+    return res.status(200).json(result.Items ?? []);
   } catch (error: any) {
-    console.error("Error:", error.message, error.stack); 
-    res.status(500).json({ message: "Something went wrong", error: error.message });
+    console.error(" Error fetching user cart:", error.message);
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 });
 
