@@ -1,4 +1,4 @@
-import express, { Router } from "express";
+import express, { Router, type Response } from "express";
 import { db } from "../data/db.js";
 import { GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { UserSchema } from "../data/zod.js";
@@ -12,7 +12,6 @@ type UserParam = {
 };
 
 const myTable = "CandyShop";
-
 
 //Scan
 // router.get("/", async (req, res) => {
@@ -38,13 +37,14 @@ router.get("/", async (req, res) => {
             TableName: myTable,
             KeyConditionExpression: "#pk = :pk",
             ExpressionAttributeNames: {
-                "#pk": "pk" 
+                "#pk": "pk",
             },
             ExpressionAttributeValues: {
-                ":pk": { S: "USER" }
-            }
+                ":pk": { S: "USER" },
+            },
         });
         const result = await db.send(command);
+        //Här används inte parseResult / Felix
         let parseResult = UserSchema.safeParse(result.Items);
         console.log("Query result:", result.Items);
         res.status(200).json(result.Items);
@@ -54,6 +54,38 @@ router.get("/", async (req, res) => {
     }
 });
 
+//Get USER med id
+router.get("/:id", async (req, res: Response) => {
+    const userId = req.params.id;
 
+    const params = {
+        TableName: myTable,
+        Key: {
+            pk: "USER",
+            sk: `USER#${userId}`,
+        },
+    };
 
-export {router};
+    try {
+        const command = new GetCommand(params);
+        const { Item } = await db.send(command);
+
+        if (!Item) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        const parsedUser = UserSchema.safeParse(Item);
+
+        if (!parsedUser.success) {
+            console.error("Data validation error:", parsedUser.error);
+            return res.status(500).json({ message: "Invalid user data." });
+        }
+
+        return res.status(200).json(parsedUser.data);
+    } catch (error) {
+        console.error("DynamoDB error:", error);
+        return res.status(500).json({ message: "Something went wrong." });
+    }
+});
+
+export { router };
