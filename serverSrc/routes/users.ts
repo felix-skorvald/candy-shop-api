@@ -1,6 +1,6 @@
 import express, { Router, type Response } from "express";
 import { db } from "../data/db.js";
-import { GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { UserSchema } from "../data/zod.js";
 import { QueryCommand } from "@aws-sdk/client-dynamodb";
 
@@ -85,6 +85,62 @@ router.get("/:id", async (req, res: Response) => {
     } catch (error) {
         console.error("DynamoDB error:", error);
         return res.status(500).json({ message: "Something went wrong." });
+    }
+});
+
+//POST api/users/
+
+router.post("/", async (req, res: Response) => {
+    try {
+        const { userId, name } = req.body;
+
+        
+        const userInput = {
+            pk: "USER",
+            sk: `USER#${userId}`,
+            name,
+        };
+
+        
+        const validation = UserSchema.safeParse(userInput);
+        
+        if (!validation.success) {
+            console.error("Validation error:", validation.error);
+            return res.status(400).json({ 
+                message: "Invalid user data", 
+                errors: validation.error.flatten() 
+            });
+        }
+
+        
+        const params = {
+            TableName: myTable,
+            Item: {
+                ...validation.data,
+                userId, 
+                createdAt: new Date().toISOString(),
+            },
+            ConditionExpression: "attribute_not_exists(sk)", // Prevent overwriting existing user
+        };
+
+        const command = new PutCommand(params);
+        await db.send(command);
+
+        console.log(`User created successfully: ${userId}`);
+        return res.status(201).json({
+            message: "User created successfully",
+            user: {
+                userId,
+                name,
+                createdAt: params.Item.createdAt,
+            },
+        });
+    } catch (error: any) {
+        console.error("DynamoDB error:", error);
+        if (error.name === "ConditionalCheckFailedException") {
+            return res.status(409).json({ message: "User with this ID already exists" });
+        }
+        return res.status(500).json({ message: "Something went wrong" });
     }
 });
 
