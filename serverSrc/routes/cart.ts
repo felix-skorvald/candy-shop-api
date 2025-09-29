@@ -1,14 +1,11 @@
 
 import { Router, type Request, type Response } from "express";
-import { QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, ScanCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const router = Router();
 
-
+//  GET /api/cart 
 router.get("/", async (req: Request, res: Response) => {
   try {
     const command = new ScanCommand({
@@ -27,6 +24,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
+//  GET /api/cart/:userId 
 router.get("/:userId", async (req: Request, res: Response) => {
   const { userId } = req.params;
 
@@ -44,6 +42,35 @@ router.get("/:userId", async (req: Request, res: Response) => {
     return res.status(200).json(result.Items ?? []);
   } catch (error: any) {
     console.error(" Error fetching user cart:", error.message);
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+});
+
+// POST /api/cart 
+router.post("/", async (req: Request, res: Response) => {
+  const { userId, productId, quantity } = req.body;
+
+  if (!userId || !productId || !quantity) {
+    return res.status(400).json({ message: "userId, productId and quantity are required" });
+  }
+
+  try {
+    const command = new PutCommand({
+      TableName: "CandyShop",
+      Item: {
+        pk: `USER#${userId}`,
+        sk: `CART#${productId}`,
+        productId,
+        quantity,
+        createdAt: new Date().toISOString(),
+      },
+    });
+
+    await db.send(command);
+
+    return res.status(201).json({ message: "Item added to cart", userId, productId, quantity });
+  } catch (error: any) {
+    console.error(" Error adding item to cart:", error.message);
     return res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 });
