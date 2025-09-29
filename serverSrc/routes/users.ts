@@ -88,22 +88,25 @@ router.get("/:id", async (req, res: Response) => {
     }
 });
 
-//POST api/users/
 
+
+//POST api/users/
 router.post("/", async (req, res: Response) => {
     try {
-        const { userId, name } = req.body;
+      
+        const { userId, name } = req.body as UserParam;
 
         
-        const userInput = {
+        const userInput: UserParam & { pk: string; sk: string } = {
+            userId,
+            name,
             pk: "USER",
             sk: `USER#${userId}`,
-            name,
         };
 
-        
+        // Validate with Zod schema
         const validation = UserSchema.safeParse(userInput);
-        
+
         if (!validation.success) {
             console.error("Validation error:", validation.error);
             return res.status(400).json({ 
@@ -112,13 +115,9 @@ router.post("/", async (req, res: Response) => {
             });
         }
 
-        
         const params = {
             TableName: myTable,
-            Item: {
-                ...validation.data,
-                userId,
-            },
+            Item: validation.data,
             ConditionExpression: "attribute_not_exists(sk)", // Prevent overwriting existing user
         };
 
@@ -128,10 +127,7 @@ router.post("/", async (req, res: Response) => {
         console.log(`User created successfully: ${userId}`);
         return res.status(201).json({
             message: "User created successfully",
-            user: {
-                userId,
-                name,
-            },
+            user: { userId, name },
         });
     } catch (error: any) {
         console.error("DynamoDB error:", error);
@@ -141,5 +137,6 @@ router.post("/", async (req, res: Response) => {
         return res.status(500).json({ message: "Something went wrong" });
     }
 });
+
 
 export { router };
