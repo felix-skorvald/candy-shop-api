@@ -1,11 +1,12 @@
 
 import { Router, type Request, type Response } from "express";
-import { QueryCommand, ScanCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { QueryCommand, ScanCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
 
 const router = Router();
 
-//  GET /api/cart 
+//GET /api/cart 
+
 router.get("/", async (req: Request, res: Response) => {
   try {
     const command = new ScanCommand({
@@ -24,7 +25,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-//  GET /api/cart/:userId 
+// GET /api/cart/:userId 
 router.get("/:userId", async (req: Request, res: Response) => {
   const { userId } = req.params;
 
@@ -62,7 +63,6 @@ router.post("/", async (req: Request, res: Response) => {
         sk: `CART#${productId}`,
         productId,
         quantity
-      
       },
     });
 
@@ -74,5 +74,33 @@ router.post("/", async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 });
+
+//  DELETE /api/cart/:userId/:productId 
+router.delete("/:userId/:productId", async (req: Request, res: Response) => {
+  const { userId, productId } = req.params;
+
+  if (!userId || !productId) {
+    return res.status(400).json({ message: "userId and productId are required" });
+  }
+
+  try {
+    const command = new DeleteCommand({
+      TableName: "CandyShop",
+      Key: {
+        pk: `USER#${userId}`,
+        sk: `CART#${productId}`,
+      },
+    });
+
+    await db.send(command);
+
+    return res.status(200).json({ message: "Item deleted from cart", userId, productId });
+  } catch (error: any) {
+    console.error(" Error deleting item from cart:", error.message);
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+});
+
+
 
 export default router;
