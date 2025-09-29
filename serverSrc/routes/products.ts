@@ -2,6 +2,7 @@ import express, { Router } from "express";
 import type { Request, Response } from "express";
 import { GetCommand, QueryCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
+import { productsData } from "../data/candyProducts.js";
 
 const router: Router = express.Router();
 
@@ -79,6 +80,41 @@ router.post('/', async (req: Request, res: Response) => {
 	}
 });
 
+// Seed all products from cansdyProducts.ts
+router.post('/seed', async (req: Request, res: Response) => {
+	try {
+		const results = [];
+		const errors = [];
+		for (const productData of productsData) {
+			try {
+				const product = {
+					pk: "PRODUCT",
+					sk: `PRODUCT#${productData.productId}`,
+					productId: String(productData.productId),
+					name: productData.name,
+					price: Number(productData.price),
+					image: productData.image,
+					AmountInStock: Number(productData.AmountInStock)
+				};
+				await db.send(new PutCommand({
+					TableName: "CandyShop",
+					Item: product
+				}));
+				results.push(product);
+			} catch (error) {
+				errors.push({ product: productData.name, error: String(error) });
+			}
+		}
+		res.status(201).json({
+			message: `Seeded ${results.length} products`,
+			successCount: results.length,
+			errorCount: errors.length,
+			errors
+		});
+	} catch (error) {
+		res.status(500).json({ message: 'Could not seed products', error: String(error) });
+	}
+});
 
 
 
