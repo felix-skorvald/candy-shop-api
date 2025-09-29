@@ -61,8 +61,8 @@ router.post("/", async (req: Request, res: Response) => {
         pk: `USER#${userId}`,
         sk: `CART#${productId}`,
         productId,
-        quantity,
-        createdAt: new Date().toISOString(),
+        quantity
+      
       },
     });
 
