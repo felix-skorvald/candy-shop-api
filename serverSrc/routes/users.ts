@@ -108,7 +108,7 @@ router.post("/", async (req, res: Response) => {
             console.error("Validation error:", validation.error);
             return res.status(400).json({ 
                 message: "Invalid user data", 
-                errors: validation.error.flatten() 
+                errors: validation.error 
             });
         }
 
