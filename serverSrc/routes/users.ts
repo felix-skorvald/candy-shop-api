@@ -45,7 +45,7 @@ router.get("/", async (req, res) => {
         });
         const result = await db.send(command);
         //Här används inte parseResult / Felix
-        let parseResult = UserSchema.safeParse(result.Items);
+        // let parseResult = UserSchema.safeParse(result.Items);
         console.log("Query result:", result.Items);
         res.status(200).json(result.Items);
     } catch (error) {
@@ -117,8 +117,7 @@ router.post("/", async (req, res: Response) => {
             TableName: myTable,
             Item: {
                 ...validation.data,
-                userId, 
-                createdAt: new Date().toISOString(),
+                userId,
             },
             ConditionExpression: "attribute_not_exists(sk)", // Prevent overwriting existing user
         };
@@ -132,7 +131,6 @@ router.post("/", async (req, res: Response) => {
             user: {
                 userId,
                 name,
-                createdAt: params.Item.createdAt,
             },
         });
     } catch (error: any) {
