@@ -120,7 +120,24 @@ router.post('/seed', async (req: Request, res: Response) => {
 router.put('/:productId', async (req: Request, res: Response) => {
 	try {
 		const { productId } = req.params;
-		const { name } = req.body;
+		const allowedFields = ['name', 'price', 'image', 'AmountInStock'];
+    const updateFields = [];
+	const ExpressionAttributeNames: Record<string, string> = {};
+	const ExpressionAttributeValues: Record<string, any> = {};
+
+		for (const field of allowedFields) {
+			if (req.body[field] !== undefined) {
+				updateFields.push(`#${field} = :${field}`);
+				ExpressionAttributeNames[`#${field}`] = field;
+				ExpressionAttributeValues[`:${field}`] = req.body[field];
+			}
+		}
+
+		if (updateFields.length === 0) {
+			return res.status(400).json({ message: 'No fields to update.' });
+		}
+
+		const UpdateExpression = "SET " + updateFields.join(", ");
 
 		const result = await db.send(new UpdateCommand({
 			TableName: "CandyShop",
@@ -128,11 +145,12 @@ router.put('/:productId', async (req: Request, res: Response) => {
 				pk: "PRODUCT",
 				sk: `PRODUCT#${productId}`
 			},
-			UpdateExpression: "SET #name = :val",
-			ExpressionAttributeNames: { "#name": "name" },
-			ExpressionAttributeValues: { ":val": name },
+			UpdateExpression: UpdateExpression,
+			ExpressionAttributeNames: ExpressionAttributeNames,
+			ExpressionAttributeValues: ExpressionAttributeValues,
 			ReturnValues: "ALL_NEW"
 		}));
+		
 		res.status(200).json({ message: `Product ${productId} updated.`, updated: result.Attributes });
 	} catch (error) {
 		console.error("Error updating product:", error);
