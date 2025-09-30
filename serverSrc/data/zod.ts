@@ -20,7 +20,7 @@ const UserSchema = z.object({
   image: z.undefined(),
   price: z.undefined(),
   productId: z.undefined(),
-  userId: z.undefined(),
+  userId: z.string().min(1).max(50).regex(idRegex),
 })
 
 // Product
