@@ -1,6 +1,6 @@
 import express, { Router, type Response } from "express";
 import { db } from "../data/db.js";
-import { GetCommand, PutCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { UserSchema } from "../data/zod.js";
 import { QueryCommand } from "@aws-sdk/client-dynamodb";
 
@@ -11,7 +11,11 @@ type UserParam = {
     name: string;
 };
 
+// For updates, all fields are optional
+type UpdateUserParam = Partial<UserParam>;
+
 const myTable = "CandyShop";
+
 
 //Scan
 // router.get("/", async (req, res) => {
@@ -137,6 +141,60 @@ router.post("/", async (req, res: Response) => {
         return res.status(500).json({ message: "Something went wrong" });
     }
 });
+
+// PUT api/users/:id
+
+router.put("/:id", async (req, res: Response) => {
+  const userId = req.params.id;
+  const body = req.body as UpdateUserParam;
+
+  // Make sure at least one field is provided
+  if (!body || Object.keys(body).length === 0) {
+    return res.status(400).json({ message: "At least one field is required to update." });
+  }
+
+  try {
+    // Build update expression dynamically
+    const updateExpressions: string[] = [];
+    const exprAttrNames: Record<string, string> = {};
+    const exprAttrValues: Record<string, any> = {};
+
+    if (body.name !== undefined) {
+      updateExpressions.push("#name = :name");
+      exprAttrNames["#name"] = "name";
+      exprAttrValues[":name"] = body.name;
+    }
+
+    const params = {
+      TableName: myTable,
+      Key: {
+        pk: "USER",
+        sk: `USER#${userId}`,
+      },
+      UpdateExpression: `SET ${updateExpressions.join(", ")}`,
+      ExpressionAttributeNames: exprAttrNames,
+      ExpressionAttributeValues: exprAttrValues,
+      ConditionExpression: "attribute_exists(sk)", // must exist
+      ReturnValues: "ALL_NEW" as const,
+    };
+
+    const command = new UpdateCommand(params);
+    const result = await db.send(command);
+
+    return res.status(200).json({
+      message: "User updated successfully",
+      user: result.Attributes,
+    });
+  } catch (error: any) {
+    console.error("DynamoDB error:", error);
+    if (error.name === "ConditionalCheckFailedException") {
+      return res.status(404).json({ message: "User not found." });
+    }
+    return res.status(500).json({ message: "Something went wrong." });
+  }
+});
+
+
 
 
 export { router };
