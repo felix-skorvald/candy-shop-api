@@ -1,8 +1,8 @@
 import express, { Router, type Response } from "express";
 import { db } from "../data/db.js";
-import { GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DeleteCommand, GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { UserSchema } from "../data/zod.js";
-import { QueryCommand } from "@aws-sdk/client-dynamodb";
+import { QueryCommand, ReturnValue } from "@aws-sdk/client-dynamodb";
 
 const router: Router = express.Router();
 
@@ -194,6 +194,45 @@ router.put("/:id", async (req, res: Response) => {
   }
 });
 
+
+// DELETE /api/users/:id
+
+router.delete("/:id", async (req, res: Response) => {
+  const userId = req.params.id;
+
+  const params = {
+    TableName: myTable,
+    Key: {
+      pk: "USER",
+      sk: `USER#${userId}`,
+    },
+    ReturnValues: "ALL_OLD" as const, // return deleted item
+  };
+
+  try {
+    const command = new DeleteCommand(params);
+    const result = await db.send(command);
+
+    if (!result.Attributes) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const parsedUser = UserSchema.safeParse(result.Attributes);
+
+    if (!parsedUser.success) {
+      console.error("Data validation error:", parsedUser.error);
+      return res.status(500).json({ message: "Invalid user data." });
+    }
+
+    return res.status(200).json({
+      message: "User deleted successfully",
+      user: parsedUser.data,
+    });
+  } catch (error) {
+    console.error("DynamoDB error:", error);
+    return res.status(500).json({ message: "Something went wrong." });
+  }
+});
 
 
 
