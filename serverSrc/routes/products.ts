@@ -2,32 +2,10 @@ import express, { Router } from "express";
 import type { Request, Response } from "express";
 import { GetCommand, QueryCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
+import { productsData } from "../data/candyProducts.js";
 
 const router: Router = express.Router();
 
-router.get('/:productId', async (req: Request, res: Response) => {
-	try {
-		const productId = req.params.productId;
-		
-		const result = await db.send(new GetCommand({
-			TableName: "CandyShop",
-			Key: {
-				pk: "PRODUCT",
-				sk: `PRODUCT#${productId}`
-			}
-		}));
-		
-		if (result.Item) {
-			res.json(result.Item);
-		} else {
-			res.status(404).json({ error: "Product not found" });
-		}
-		
-	} catch (error) {
-		console.error("Error fetching single product:", error);
-		res.status(500).json({ message: 'Could not fetch product', error: String(error) });
-	}
-});
 //all products
 router.get('/', async (req: Request, res: Response) => {
 	try {
@@ -51,21 +29,42 @@ router.get('/', async (req: Request, res: Response) => {
 	}
 });
 
-//update product
-router.put('/:productId', async (req: Request, res: Response) => {
+//single product
+router.get('/:productId', async (req: Request, res: Response) => {
 	try {
 		const productId = req.params.productId;
 		
+		const result = await db.send(new GetCommand({
+			TableName: "CandyShop",
+			Key: {
+				pk: "PRODUCT",
+				sk: `PRODUCT#${productId}`
+			}
+		}));
+		
+		if (result.Item) {
+			res.json(result.Item);
+		} else {
+			res.status(404).json({ error: "Product not found" });
+		}
+		
+	} catch (error) {
+		console.error("Error fetching single product:", error);
+		res.status(500).json({ message: 'Could not fetch product', error: String(error) });
+	}
+});
+
+// Create new product 
+router.post('/', async (req: Request, res: Response) => {
+	try {
 		const product = {
 			pk: "PRODUCT",
-			sk: `PRODUCT#${productId}`,
-			productId,
+			sk: `PRODUCT#${req.body.productId}`,
+			productId: String(req.body.productId), 
 			name: req.body.name,
-			price: req.body.price,
-			description: req.body.description || "",
-			category: req.body.category || "general",
-			imageUrl: req.body.imageUrl || "",
-			updatedAt: new Date().toISOString()
+			price: Number(req.body.price), 
+			image: req.body.image,
+			AmountInStock: Number(req.body.AmountInStock) 
 		};
 		
 		await db.send(new PutCommand({
@@ -73,12 +72,50 @@ router.put('/:productId', async (req: Request, res: Response) => {
 			Item: product
 		}));
 		
-		res.status(200).json(product);
+		res.status(201).json(product);
 		
 	} catch (error) {
-		console.error("Error updating product:", error);
-		res.status(500).json({ message: 'Could not update product', error: String(error) });
+		console.error("Error creating product:", error);
+		res.status(500).json({ message: 'Could not create product', error: String(error) });
 	}
 });
+
+// Seed all products from cansdyProducts.ts
+router.post('/seed', async (req: Request, res: Response) => {
+	try {
+		const results = [];
+		const errors = [];
+		for (const productData of productsData) {
+			try {
+				const product = {
+					pk: "PRODUCT",
+					sk: `PRODUCT#${productData.productId}`,
+					productId: String(productData.productId),
+					name: productData.name,
+					price: Number(productData.price),
+					image: productData.image,
+					AmountInStock: Number(productData.AmountInStock)
+				};
+				await db.send(new PutCommand({
+					TableName: "CandyShop",
+					Item: product
+				}));
+				results.push(product);
+			} catch (error) {
+				errors.push({ product: productData.name, error: String(error) });
+			}
+		}
+		res.status(201).json({
+			message: `Seeded ${results.length} products`,
+			successCount: results.length,
+			errorCount: errors.length,
+			errors
+		});
+	} catch (error) {
+		res.status(500).json({ message: 'Could not seed products', error: String(error) });
+	}
+});
+
+
 
 export { router };
