@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import type { Request, Response } from "express";
-import { GetCommand, QueryCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, QueryCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
 import { productsData } from "../data/candyProducts.js";
 
@@ -116,6 +116,28 @@ router.post('/seed', async (req: Request, res: Response) => {
 	}
 });
 
+//update product
+router.put('/:productId', async (req: Request, res: Response) => {
+	try {
+		const { productId } = req.params;
+		const { name } = req.body;
 
+		const result = await db.send(new UpdateCommand({
+			TableName: "CandyShop",
+			Key: {
+				pk: "PRODUCT",
+				sk: `PRODUCT#${productId}`
+			},
+			UpdateExpression: "SET #name = :val",
+			ExpressionAttributeNames: { "#name": "name" },
+			ExpressionAttributeValues: { ":val": name },
+			ReturnValues: "ALL_NEW"
+		}));
+		res.status(200).json({ message: `Product ${productId} updated.`, updated: result.Attributes });
+	} catch (error) {
+		console.error("Error updating product:", error);
+		res.status(500).json({ message: 'Could not update product', error: String(error) });
+	}
+});
 
 export { router };
