@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import type { Request, Response } from "express";
-import { GetCommand, QueryCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, QueryCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
 import { productsData } from "../data/candyProducts.js";
 
@@ -155,6 +155,33 @@ router.put('/:productId', async (req: Request, res: Response) => {
 	} catch (error) {
 		console.error("Error updating product:", error);
 		res.status(500).json({ message: 'Could not update product', error: String(error) });
+	}
+});
+
+//delete product
+router.delete('/:productId', async (req: Request, res: Response) => {
+	try {
+		const productId = req.params.productId;
+		const result = await db.send(new DeleteCommand({
+			TableName: "CandyShop",
+			Key: {
+				pk: "PRODUCT",
+				sk: `PRODUCT#${productId}`
+			},
+			ReturnValues: "ALL_OLD"
+		}));
+
+		if (!result.Attributes) {
+			return res.status(404).json({ message: `Product ${productId} not found.` });
+		}
+
+		return res.status(200).json({
+			message: `Product ${productId} deleted successfully`,
+			product: result.Attributes,
+		});
+	} catch (error) {
+		console.error("Error deleting product:", error);
+		return res.status(500).json({ message: 'Could not delete product', error: String(error) });
 	}
 });
 
