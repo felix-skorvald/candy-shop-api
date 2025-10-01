@@ -1,8 +1,9 @@
-import express, { Router, type Response } from "express";
+import express, { Router, type Response, type Request } from "express";
 import { db } from "../data/db.js";
 import { DeleteCommand, GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { UserSchema } from "../data/zod.js";
-import { QueryCommand, ReturnValue } from "@aws-sdk/client-dynamodb";
+import { QueryCommand } from "@aws-sdk/client-dynamodb";
+import type { IdParam } from "../data/types.js";
 
 const router: Router = express.Router();
 
@@ -17,23 +18,7 @@ type UpdateUserParam = Partial<UserParam>;
 const myTable = "CandyShop";
 
 
-//Scan
-// router.get("/", async (req, res) => {
-//     try {
-//         console.log("Fetching users from DynamoDB...");
-//         const command = new ScanCommand({
-//             TableName: myTable,
-//         });
-//         const result = await db.send(command);
-//         console.log("Scan result:", result.Items);
-//         res.status(200).json(result.Items);
-//     } catch (error) {
-//         console.error("DynamoDB error:", error);
-//         res.status(500).json({ message: "Something went wrong"});
-//     }
-// });
-
-//GetUsers
+//Get ALL Users
 router.get("/", async (req, res) => {
     try {
         console.log("Querying users from DynamoDB...");
@@ -48,8 +33,6 @@ router.get("/", async (req, res) => {
             },
         });
         const result = await db.send(command);
-        //Här används inte parseResult / Felix
-        // let parseResult = UserSchema.safeParse(result.Items);
         console.log("Query result:", result.Items);
         res.status(200).json(result.Items);
     } catch (error) {
@@ -59,7 +42,7 @@ router.get("/", async (req, res) => {
 });
 
 //Get USER med id
-router.get("/:id", async (req, res: Response) => {
+router.get("/:id", async (req: Request<IdParam>, res: Response) => {
     const userId = req.params.id;
 
     const params = {
