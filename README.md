@@ -37,7 +37,22 @@ Content-Type: application/json
     }
 ```
 
-### Delete a product
+### Update a Product
+
+```bash
+PUT /api/products/:productId
+
+Content-Type: application/json
+
+{
+        "name": "Lollipop",
+        "price": 19,
+        "image": "https://media.gettyimages.com/id/182859150/sv/foto/single-lollipop.jpg",
+        "AmountInStock": 300
+    }
+```
+
+### Delete a Product
 
 ```bash
 DELETE /api/products/:productId
@@ -57,6 +72,12 @@ GET /api/cart/
 GET /api/cart/:userId
 ```
 
+### Delete a Product in Cart
+
+```bash
+DELETE /api/cart/:userId/:productId
+```
+
 ### Delete a Cart
 
 ```bash
@@ -65,14 +86,44 @@ DELETE /api/cart/:userId
 
 ## 👤 Users
 
+### Get all Users
+
+```bash
+GET /api/users/
+```
+
+### Get a specific User
+
+```bash
+GET /api/users/:userId
+```
+
 ### Create a new User
 
 ```bash
-POST /api/users
+POST /api/users/
 Content-Type: application/json
 
 {
   "name": "candylover"
 }
 
+```
+
+### Update a User
+
+```bash
+Put /api/users/:userId
+
+Content-Type: application/json
+
+{
+  "name": "snacklover"
+}
+```
+
+### Delete a User
+
+```bash
+DELETE /api/users/:userId
 ```
