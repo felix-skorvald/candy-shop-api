@@ -58,6 +58,8 @@ Content-Type: application/json
 DELETE /api/products/:productId
 ```
 
+---
+
 ## 🛒 Cart
 
 ### Get all Cart Items
@@ -83,6 +85,8 @@ DELETE /api/cart/:userId/:productId
 ```bash
 DELETE /api/cart/:userId
 ```
+
+---
 
 ## 👤 Users
 
@@ -127,3 +131,5 @@ Content-Type: application/json
 ```bash
 DELETE /api/users/:userId
 ```
+
+---
