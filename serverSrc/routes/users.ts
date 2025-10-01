@@ -20,14 +20,14 @@ router.get(
     try {
       console.log("Querying users from DynamoDB...");
       const command = new QueryCommand({
-  TableName: myTable,
-  KeyConditionExpression: "#pk = :pk",
-  ExpressionAttributeNames: { "#pk": "pk" },
-  ExpressionAttributeValues: { ":pk": "USER" },
-});
-
-const result = await db.send(command);
-return res.status(200).json((result.Items ?? []) as User[]);
+        TableName: myTable,
+        KeyConditionExpression: "#pk = :pk",
+        ExpressionAttributeNames: { "#pk": "pk" },
+        ExpressionAttributeValues: { ":pk": "USER" },
+      });
+      
+      const result = await db.send(command);
+      return res.status(200).json((result.Items ?? []) as User[]);
     } catch (error) {
       console.error("DynamoDB error:", error);
       return res.status(500).json({ message: "Something went wrong" });
@@ -40,25 +40,25 @@ router.get(
   "/:id",
   async (req: Request<IdParam>, res: Response<User | ErrorResponse>) => {
     const userId = req.params.id;
-
+    
     const params = {
       TableName: myTable,
       Key: { pk: "USER", sk: `USER#${userId}` },
     };
-
+    
     try {
       const command = new GetCommand(params);
       const { Item } = await db.send(command);
-
+      
       if (!Item) {
         return res.status(404).json({ message: "User not found." });
       }
-
+      
       const parsedUser = UserSchema.safeParse(Item);
       if (!parsedUser.success) {
         return res.status(500).json({ message: "Invalid user data." });
       }
-
+      
       return res.status(200).json(parsedUser.data as User);
     } catch (error) {
       console.error("DynamoDB error:", error);
@@ -76,14 +76,14 @@ router.post(
   ) => {
     try {
       const { userId, name } = req.body;
-
+      
       const userInput: User = {
         userId,
         name,
         pk: "USER",
         sk: `USER#${userId}`,
       };
-
+      
       const validation = UserSchema.safeParse(userInput);
       if (!validation.success) {
         return res.status(400).json({
@@ -91,16 +91,16 @@ router.post(
           errors: validation.error,
         });
       }
-
+      
       const params = {
         TableName: myTable,
         Item: validation.data,
         ConditionExpression: "attribute_not_exists(sk)",
       };
-
+      
       const command = new PutCommand(params);
       await db.send(command);
-
+      
       return res.status(201).json({
         message: "User created successfully",
         user: { userId, name },
@@ -124,34 +124,41 @@ router.put(
   ) => {
     const userId = req.params.id;
     const { name } = req.body;
-
+    
     if (name === undefined) {
       return res.status(400).json({ message: "Name is required to update." });
     }
-
+    
     try {
       const params = {
         TableName: myTable,
         Key: { pk: "USER", sk: `USER#${userId}` },
-        UpdateExpression: "SET name = :name",
+        UpdateExpression: "SET #name = :name",  
+        ExpressionAttributeNames: { "#name": "name" }, 
         ExpressionAttributeValues: { ":name": name },
         ConditionExpression: "attribute_exists(sk)",
         ReturnValues: "ALL_NEW" as const,
       };
-
+      
       const command = new UpdateCommand(params);
       const result = await db.send(command);
-
+      
       return res.status(200).json({
         message: "User updated successfully",
         user: result.Attributes as User,
       });
     } catch (error: any) {
-      console.error("DynamoDB error:", error);
-      if (error.name === "ConditionalCheckFailedException") {
-        return res.status(404).json({ message: "User not found." });
+      console.error("DynamoDB error:", {
+        name: error.name,
+        message: error.message,
+        type: error.__type,
+        code: error.code  
+      });
+      
+      if (error.name === "ValidationException" || error.__type?.includes("ValidationException")) {
+        return res.status(400).json({ message: error.message || "Invalid request parameters" });
       }
-      return res.status(500).json({ message: "Something went wrong." });
+      
     }
   }
 );
@@ -164,26 +171,26 @@ router.delete(
     res: Response<DeleteUserResponse | ErrorResponse>
   ) => {
     const userId = req.params.id;
-
+    
     const params = {
       TableName: myTable,
       Key: { pk: "USER", sk: `USER#${userId}` },
       ReturnValues: "ALL_OLD" as const,
     };
-
+    
     try {
       const command = new DeleteCommand(params);
       const result = await db.send(command);
-
+      
       if (!result.Attributes) {
         return res.status(404).json({ message: "User not found." });
       }
-
+      
       const parsedUser = UserSchema.safeParse(result.Attributes);
       if (!parsedUser.success) {
         return res.status(500).json({ message: "Invalid user data." });
       }
-
+      
       return res.status(200).json({
         message: "User deleted successfully",
         user: parsedUser.data as User,
