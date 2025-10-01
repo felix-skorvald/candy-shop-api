@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import type { Request, Response } from "express";
-import { GetCommand, QueryCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, QueryCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
 import { productsData } from "../data/candyProducts.js";
 
@@ -116,6 +116,73 @@ router.post('/seed', async (req: Request, res: Response) => {
 	}
 });
 
+//update product
+router.put('/:productId', async (req: Request, res: Response) => {
+	try {
+		const { productId } = req.params;
+		const allowedFields = ['name', 'price', 'image', 'AmountInStock'];
+    const updateFields = [];
+	const ExpressionAttributeNames: Record<string, string> = {};
+	const ExpressionAttributeValues: Record<string, any> = {};
 
+		for (const field of allowedFields) {
+			if (req.body[field] !== undefined) {
+				updateFields.push(`#${field} = :${field}`);
+				ExpressionAttributeNames[`#${field}`] = field;
+				ExpressionAttributeValues[`:${field}`] = req.body[field];
+			}
+		}
+
+		if (updateFields.length === 0) {
+			return res.status(400).json({ message: 'No fields to update.' });
+		}
+
+		const UpdateExpression = "SET " + updateFields.join(", ");
+
+		const result = await db.send(new UpdateCommand({
+			TableName: "CandyShop",
+			Key: {
+				pk: "PRODUCT",
+				sk: `PRODUCT#${productId}`
+			},
+			UpdateExpression: UpdateExpression,
+			ExpressionAttributeNames: ExpressionAttributeNames,
+			ExpressionAttributeValues: ExpressionAttributeValues,
+			ReturnValues: "ALL_NEW"
+		}));
+		
+		res.status(200).json({ message: `Product ${productId} updated.`, updated: result.Attributes });
+	} catch (error) {
+		console.error("Error updating product:", error);
+		res.status(500).json({ message: 'Could not update product', error: String(error) });
+	}
+});
+
+//delete product
+router.delete('/:productId', async (req: Request, res: Response) => {
+	try {
+		const productId = req.params.productId;
+		const result = await db.send(new DeleteCommand({
+			TableName: "CandyShop",
+			Key: {
+				pk: "PRODUCT",
+				sk: `PRODUCT#${productId}`
+			},
+			ReturnValues: "ALL_OLD"
+		}));
+
+		if (!result.Attributes) {
+			return res.status(404).json({ message: `Product ${productId} not found.` });
+		}
+
+		return res.status(200).json({
+			message: `Product ${productId} deleted successfully`,
+			product: result.Attributes,
+		});
+	} catch (error) {
+		console.error("Error deleting product:", error);
+		return res.status(500).json({ message: 'Could not delete product', error: String(error) });
+	}
+});
 
 export { router };

@@ -2,8 +2,7 @@ import * as z from "zod";
 
 const idRegex = /^[a-zA-Z0-9#]+$/
 const nameRegex = /^[a-zA-Z0-9\s]+$/
-const imageUrlRegex =
-  /^https?:\/\/[a-zA-Z0-9\-\.]+(\/[a-zA-Z0-9\-\.\s\/]*\.(png|jpg|jpeg|gif|bmp|webp|tiff|svg))$/i
+const imageUrlRegex = /^https?:\/\/[^\s]+$/i
 
 // Base schema för pk och sk
 const BaseSchema = {
@@ -29,7 +28,7 @@ const ProductSchema = z.object({
   name: z.string().min(2).max(50).regex(nameRegex),
   amount: z.undefined(),
   AmountInStock: z.number().nonnegative().max(9999),
-  image: z.string().regex(imageUrlRegex, "URL must be a valid image URL ending in .png, .jpg, .jpeg, .gif, .bmp, .webp, .tiff, or .svg").trim(),
+  image: z.string().regex(imageUrlRegex, "URL must be a valid image URL").trim(),
   price: z.number().min(1).max(99999),
   productId: z.string().min(1).max(50).regex(idRegex),
   userId: z.undefined(),
