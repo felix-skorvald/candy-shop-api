@@ -1,20 +1,25 @@
+
 import { Router, type Request, type Response } from "express";
 import { QueryCommand, ScanCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
-import { CartSchema } from "../data/zod.js"; 
+import { CartSchema } from "../data/zod.js";
+import { z } from "zod";
 
 const router = Router();
 
-// GET /api/cart 
-router.get("/", async (req: Request, res: Response) => {
-    try {
-        const command = new ScanCommand({
-            TableName: "CandyShop",
-            FilterExpression: "pk = :pk",
-            ExpressionAttributeValues: {
-                ":pk": "CART"
-            },
-        });
+/**
+ * GET /api/cart
+ * Response: 200 OK + array of cart items
+ */
+router.get("/", async (_req: Request, res: Response) => {
+  try {
+    const command = new ScanCommand({
+      TableName: "CandyShop",
+      FilterExpression: "pk = :pk",
+      ExpressionAttributeValues: {
+        ":pk": "CART",
+      },
+    });
 
     const result = await db.send(command);
     return res.status(200).json(result.Items ?? []);
@@ -24,19 +29,22 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/cart/:userId 
+/**
+ * GET /api/cart/:userId
+ * Response: 200 OK + array of cart items for a user
+ */
 router.get("/:userId", async (req: Request, res: Response) => {
-    const { userId } = req.params;
+  const { userId } = req.params;
 
-    try {
-        const command = new QueryCommand({
-            TableName: "CandyShop",
-            KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
-            ExpressionAttributeValues: {
-                ":pk": "CART",
-                ":sk": `USER#${userId}#PRODUCT#`,
-            },
-        });
+  try {
+    const command = new QueryCommand({
+      TableName: "CandyShop",
+      KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+      ExpressionAttributeValues: {
+        ":pk": "CART",
+        ":sk": `USER#${userId}#PRODUCT#`,
+      },
+    });
 
     const result = await db.send(command);
     return res.status(200).json(result.Items ?? []);
@@ -46,7 +54,11 @@ router.get("/:userId", async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/cart 
+/**
+ * POST /api/cart
+ * Body: { userId: string, productId: string, amount: number }
+ * Response: 201 Created + created cart item
+ */
 router.post("/", async (req: Request, res: Response) => {
   try {
     const parsed = CartSchema.parse({
@@ -63,24 +75,23 @@ router.post("/", async (req: Request, res: Response) => {
     });
 
     await db.send(command);
-
     return res.status(201).json({ message: "Item added to cart", ...parsed });
   } catch (error: any) {
-    if (error.errors) {
-      return res.status(400).json({ message: "Validation failed", errors: error.errors });
+    if (error instanceof z.ZodError) {
+     return res.status(400).json({ message: "Validation failed", errors: error.issues });
+
     }
     console.error("Error adding item to cart:", error.message);
     return res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 });
 
-// DELETE /api/cart/:userId/:productId 
+/**
+ * DELETE /api/cart/:userId/:productId
+ * Response: 200 OK + deleted item info
+ */
 router.delete("/:userId/:productId", async (req: Request, res: Response) => {
   const { userId, productId } = req.params;
-
-  if (!userId || !productId) {
-    return res.status(400).json({ message: "userId and productId are required" });
-  }
 
   try {
     const command = new DeleteCommand({
@@ -92,7 +103,6 @@ router.delete("/:userId/:productId", async (req: Request, res: Response) => {
     });
 
     await db.send(command);
-
     return res.status(200).json({ message: "Item deleted from cart", userId, productId });
   } catch (error: any) {
     console.error("Error deleting item from cart:", error.message);
@@ -100,7 +110,11 @@ router.delete("/:userId/:productId", async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/cart/:userId/:productId 
+/**
+ * PUT /api/cart/:userId/:productId
+ * Body: { amount: number }
+ * Response: 200 OK + updated cart item
+ */
 router.put("/:userId/:productId", async (req: Request, res: Response) => {
   const { userId, productId } = req.params;
 
@@ -112,8 +126,8 @@ router.put("/:userId/:productId", async (req: Request, res: Response) => {
     const command = new PutCommand({
       TableName: "CandyShop",
       Item: {
-        pk: `CART`,
-        sk: `USER#${userId}#CART#${productId}`,
+        pk: "CART",
+        sk: `USER#${userId}#PRODUCT#${productId}`,
         userId,
         productId,
         amount: parsed.amount,
@@ -121,11 +135,11 @@ router.put("/:userId/:productId", async (req: Request, res: Response) => {
     });
 
     await db.send(command);
-
     return res.status(200).json({ message: "Cart item updated", userId, productId, amount: parsed.amount });
   } catch (error: any) {
-    if (error.errors) {
-      return res.status(400).json({ message: "Validation failed", errors: error.errors });
+    if (error instanceof z.ZodError) {
+     return res.status(400).json({ message: "Validation failed", errors: error.issues });
+
     }
     console.error("Error updating cart item:", error.message);
     return res.status(500).json({ message: "Something went wrong", error: error.message });
