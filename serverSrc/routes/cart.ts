@@ -10,9 +10,9 @@ router.get("/", async (req: Request, res: Response) => {
     try {
         const command = new ScanCommand({
             TableName: "CandyShop",
-            FilterExpression: "begins_with(sk, :sk)",
+            FilterExpression: "pk = :pk",
             ExpressionAttributeValues: {
-                ":sk": "CART#",
+                ":pk": "CART"
             },
         });
 
@@ -33,8 +33,8 @@ router.get("/:userId", async (req: Request, res: Response) => {
             TableName: "CandyShop",
             KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
             ExpressionAttributeValues: {
-                ":pk": `USER#${userId}`,
-                ":sk": "CART#",
+                ":pk": "CART",
+                ":sk": `USER#${userId}#PRODUCT#`,
             },
         });
 
@@ -50,8 +50,8 @@ router.get("/:userId", async (req: Request, res: Response) => {
 router.post("/", async (req: Request, res: Response) => {
   try {
     const parsed = CartSchema.parse({
-      pk: `USER#${req.body.userId}`,
-      sk: `CART#${req.body.productId}`,
+      pk: "CART",
+      sk: `USER#${req.body.userId}#PRODUCT#${req.body.productId}`,
       userId: req.body.userId,
       productId: req.body.productId,
       amount: req.body.amount,
@@ -86,8 +86,8 @@ router.delete("/:userId/:productId", async (req: Request, res: Response) => {
     const command = new DeleteCommand({
       TableName: "CandyShop",
       Key: {
-        pk: `USER#${userId}`,
-        sk: `CART#${productId}`,
+        pk: "CART",
+        sk: `USER#${userId}#PRODUCT#${productId}`,
       },
     });
 
@@ -112,8 +112,8 @@ router.put("/:userId/:productId", async (req: Request, res: Response) => {
     const command = new PutCommand({
       TableName: "CandyShop",
       Item: {
-        pk: `USER#${userId}`,
-        sk: `CART#${productId}`,
+        pk: `CART`,
+        sk: `USER#${userId}#CART#${productId}`,
         userId,
         productId,
         amount: parsed.amount,
