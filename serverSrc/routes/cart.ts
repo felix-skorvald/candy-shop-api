@@ -34,7 +34,7 @@ router.get("/:userId", async (req: Request, res: Response) => {
             KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
             ExpressionAttributeValues: {
                 ":pk": "CART",
-                ":sk": `USER#${userId}#PRODUCT#?????`,
+                ":sk": `USER#${userId}#PRODUCT#`,
             },
         });
 
