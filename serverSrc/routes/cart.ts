@@ -1,12 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import { QueryCommand, ScanCommand, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
+import { CartSchema } from "../data/zod.js"; 
 
 const router = Router();
 
-
-//GET /api/cart 
-
+// GET /api/cart 
 router.get("/", async (req: Request, res: Response) => {
     try {
         const command = new ScanCommand({
@@ -17,14 +16,12 @@ router.get("/", async (req: Request, res: Response) => {
             },
         });
 
-        const result = await db.send(command);
-        return res.status(200).json(result.Items ?? []);
-    } catch (error: any) {
-        console.error(" Error fetching all carts:", error.message);
-        return res
-            .status(500)
-            .json({ message: "Something went wrong", error: error.message });
-    }
+    const result = await db.send(command);
+    return res.status(200).json(result.Items ?? []);
+  } catch (error: any) {
+    console.error("Error fetching all carts:", error.message);
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
 });
 
 // GET /api/cart/:userId 
@@ -41,45 +38,43 @@ router.get("/:userId", async (req: Request, res: Response) => {
             },
         });
 
-        const result = await db.send(command);
-        return res.status(200).json(result.Items ?? []);
-    } catch (error: any) {
-        console.error(" Error fetching user cart:", error.message);
-        return res
-            .status(500)
-            .json({ message: "Something went wrong", error: error.message });
-    }
-});
-
-// POST /api/cart 
-router.post("/", async (req: Request, res: Response) => {
-  const { userId, productId, quantity } = req.body;
-
-  if (!userId || !productId || !quantity) {
-    return res.status(400).json({ message: "userId, productId and quantity are required" });
-  }
-
-  try {
-    const command = new PutCommand({
-      TableName: "CandyShop",
-      Item: {
-        pk: `USER#${userId}`,
-        sk: `CART#${productId}`,
-        productId,
-        quantity
-      },
-    });
-
-    await db.send(command);
-
-    return res.status(201).json({ message: "Item added to cart", userId, productId, quantity });
+    const result = await db.send(command);
+    return res.status(200).json(result.Items ?? []);
   } catch (error: any) {
-    console.error(" Error adding item to cart:", error.message);
+    console.error("Error fetching user cart:", error.message);
     return res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 });
 
-//  DELETE /api/cart/:userId/:productId 
+// POST /api/cart 
+router.post("/", async (req: Request, res: Response) => {
+  try {
+    const parsed = CartSchema.parse({
+      pk: `USER#${req.body.userId}`,
+      sk: `CART#${req.body.productId}`,
+      userId: req.body.userId,
+      productId: req.body.productId,
+      amount: req.body.amount,
+    });
+
+    const command = new PutCommand({
+      TableName: "CandyShop",
+      Item: parsed,
+    });
+
+    await db.send(command);
+
+    return res.status(201).json({ message: "Item added to cart", ...parsed });
+  } catch (error: any) {
+    if (error.errors) {
+      return res.status(400).json({ message: "Validation failed", errors: error.errors });
+    }
+    console.error("Error adding item to cart:", error.message);
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+});
+
+// DELETE /api/cart/:userId/:productId 
 router.delete("/:userId/:productId", async (req: Request, res: Response) => {
   const { userId, productId } = req.params;
 
@@ -100,11 +95,41 @@ router.delete("/:userId/:productId", async (req: Request, res: Response) => {
 
     return res.status(200).json({ message: "Item deleted from cart", userId, productId });
   } catch (error: any) {
-    console.error(" Error deleting item from cart:", error.message);
+    console.error("Error deleting item from cart:", error.message);
     return res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 });
 
+// PUT /api/cart/:userId/:productId 
+router.put("/:userId/:productId", async (req: Request, res: Response) => {
+  const { userId, productId } = req.params;
 
+  try {
+    const parsed = CartSchema.pick({ amount: true }).parse({
+      amount: req.body.amount,
+    });
+
+    const command = new PutCommand({
+      TableName: "CandyShop",
+      Item: {
+        pk: `USER#${userId}`,
+        sk: `CART#${productId}`,
+        userId,
+        productId,
+        amount: parsed.amount,
+      },
+    });
+
+    await db.send(command);
+
+    return res.status(200).json({ message: "Cart item updated", userId, productId, amount: parsed.amount });
+  } catch (error: any) {
+    if (error.errors) {
+      return res.status(400).json({ message: "Validation failed", errors: error.errors });
+    }
+    console.error("Error updating cart item:", error.message);
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+});
 
 export default router;
