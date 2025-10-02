@@ -56,7 +56,7 @@ router.get('/:productId', async (req: Request, res: Response) => {
 		
 	} catch (error) {
 		console.error("Error fetching single product:", error);
-		res.status(500).json({ message: 'Something went wrong' });
+		res.status(500).json({ message: 'Could not fetch product', error: String(error) });
 	}
 });
 
@@ -86,7 +86,10 @@ router.post('/', async (req: Request, res: Response) => {
 			Item: product
 		}));
 		
-		res.status(201).json(product);
+		res.status(201).json({
+			message: "Hi there Dmytro!Product created successfully",
+			product: product
+		});
 		
 	} catch (error) {
 		console.error("Error creating product:", error);
@@ -184,7 +187,10 @@ router.put('/:productId', async (req: Request, res: Response) => {
 			ReturnValues: "ALL_NEW"
 		}));
 		
-		res.status(200).json({ message: `Product ${productId} updated.`, updated: result.Attributes });
+		res.status(200).json({ 
+			message: "Hi again!Product updated successfully", 
+			product: result.Attributes 
+		});
 	} catch (error) {
 		console.error("Error updating product:", error);
 		res.status(500).json({ message: 'Could not update product', error: String(error) });
@@ -205,6 +211,7 @@ router.delete('/:productId', async (req: Request, res: Response) => {
 		}));
 
 		if (!result.Attributes) {
+
 			return res.status(404).json({ message: "Product not found" });
 		}
 
@@ -214,7 +221,7 @@ router.delete('/:productId', async (req: Request, res: Response) => {
 		}
 
 		return res.status(200).json({
-			message: "Product deleted successfully",
+			message: "Goodbye! Product deleted successfully",
 			product: parsedProduct.data,
 		});
 	} catch (error) {
