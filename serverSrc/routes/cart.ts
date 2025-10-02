@@ -184,7 +184,7 @@ router.put(
     const { userId, productId } = req.params;
 
     try {
-      // فقط amount از body ولیدیت میشه
+      
       const parsed = CartSchema.pick({ amount: true }).parse({
         amount: req.body.amount,
       });
