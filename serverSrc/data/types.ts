@@ -38,5 +38,65 @@ interface ErrorResponse {
   errors?: unknown;
 }
 
-export type { IdParam, User, CreateUserBody, CreateUserResponse, UpdateUserResponse, DeleteUserResponse, ErrorResponse };
+// Product interfaces
+interface Product {
+  productId: string;
+  name: string;
+  price: number;
+  image: string;
+  AmountInStock: number;
+  pk: string;
+  sk: string;
+}
+
+interface CreateProductBody {
+  productId: string;
+  name: string;
+  price: number;
+  image: string;
+  AmountInStock: number;
+}
+
+interface CreateProductResponse {
+  message: string;
+  product: Product;
+}
+
+interface UpdateProductBody {
+  name?: string;
+  price?: number;
+  image?: string;
+  AmountInStock?: number;
+}
+
+interface UpdateProductResponse {
+  message: string;
+  product: Product;
+}
+
+interface DeleteProductResponse {
+  message: string;
+  product: Product;
+}
+
+interface ProductIdParam {
+  productId: string;
+}
+
+export type { 
+  IdParam, 
+  User, 
+  CreateUserBody, 
+  CreateUserResponse, 
+  UpdateUserResponse, 
+  DeleteUserResponse, 
+  ErrorResponse,
+  Product,
+  CreateProductBody,
+  CreateProductResponse,
+  UpdateProductBody,
+  UpdateProductResponse,
+  DeleteProductResponse,
+  ProductIdParam
+};
 

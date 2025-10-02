@@ -4,6 +4,16 @@ import { GetCommand, QueryCommand, PutCommand, UpdateCommand, DeleteCommand } fr
 import { db } from "../data/db.js";
 import { productsData } from "../data/candyProducts.js";
 import { ProductSchema } from "../data/zod.js";
+import type { 
+  Product, 
+  CreateProductBody, 
+  CreateProductResponse, 
+  UpdateProductBody, 
+  UpdateProductResponse, 
+  DeleteProductResponse, 
+  ProductIdParam, 
+  ErrorResponse 
+} from "../data/types.js";
 
 const router: Router = express.Router();
 
@@ -60,8 +70,11 @@ router.get('/:productId', async (req: Request, res: Response) => {
 	}
 });
 
-// Create new product 
-router.post('/', async (req: Request, res: Response) => {
+// Create new product
+router.post('/', async (
+    req: Request<{}, CreateProductResponse | ErrorResponse, CreateProductBody>, 
+    res: Response<CreateProductResponse | ErrorResponse>
+) => {
 	try {
 		const product = {
 			pk: "PRODUCT",
@@ -93,7 +106,7 @@ router.post('/', async (req: Request, res: Response) => {
 		
 	} catch (error) {
 		console.error("Error creating product:", error);
-		res.status(500).json({ message: 'Could not create product', error: String(error) });
+		res.status(500).json({ message: 'Could not create product' });
 	}
 });
 
