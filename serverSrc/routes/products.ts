@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { GetCommand, QueryCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
 import { productsData } from "../data/candyProducts.js";
+import { ProductSchema } from "../data/zod.js";
 
 const router: Router = express.Router();
 
@@ -42,11 +43,16 @@ router.get('/:productId', async (req: Request, res: Response) => {
 			}
 		}));
 		
-		if (result.Item) {
-			res.json(result.Item);
-		} else {
-			res.status(404).json({ error: "Product not found" });
+		if (!result.Item) {
+			return res.status(404).json({ message: "Product not found" });
 		}
+		
+		const parsedProduct = ProductSchema.safeParse(result.Item);
+		if (!parsedProduct.success) {
+			return res.status(500).json({ message: "Invalid product data" });
+		}
+		
+		return res.status(200).json(parsedProduct.data);
 		
 	} catch (error) {
 		console.error("Error fetching single product:", error);
@@ -67,12 +73,23 @@ router.post('/', async (req: Request, res: Response) => {
 			AmountInStock: Number(req.body.AmountInStock) 
 		};
 		
+		const validation = ProductSchema.safeParse(product);
+		if (!validation.success) {
+			return res.status(400).json({ 
+				message: "Invalid product data", 
+				errors: validation.error 
+			});
+		}
+		
 		await db.send(new PutCommand({
 			TableName: "CandyShop",
 			Item: product
 		}));
 		
-		res.status(201).json(product);
+		res.status(201).json({
+			message: "Hi there Dmytro!Product created successfully",
+			product: product
+		});
 		
 	} catch (error) {
 		console.error("Error creating product:", error);
@@ -120,6 +137,25 @@ router.post('/seed', async (req: Request, res: Response) => {
 router.put('/:productId', async (req: Request, res: Response) => {
 	try {
 		const { productId } = req.params;
+				
+		const getResult = await db.send(new GetCommand({
+			TableName: "CandyShop",
+			Key: { pk: "PRODUCT", sk: `PRODUCT#${productId}` }
+		}));
+		
+		if (!getResult.Item) {
+			return res.status(404).json({ message: "Product not found" });
+		}
+		
+		const mergedProduct = { ...getResult.Item, ...req.body, productId };
+		
+		const validation = ProductSchema.safeParse(mergedProduct);
+		if (!validation.success) {
+			return res.status(400).json({ 
+				message: "Invalid product data", 
+				errors: validation.error 
+			});
+		}
 		const allowedFields = ['name', 'price', 'image', 'AmountInStock'];
     const updateFields = [];
 	const ExpressionAttributeNames: Record<string, string> = {};
@@ -151,7 +187,10 @@ router.put('/:productId', async (req: Request, res: Response) => {
 			ReturnValues: "ALL_NEW"
 		}));
 		
-		res.status(200).json({ message: `Product ${productId} updated.`, updated: result.Attributes });
+		res.status(200).json({ 
+			message: "Hi again!Product updated successfully", 
+			product: result.Attributes 
+		});
 	} catch (error) {
 		console.error("Error updating product:", error);
 		res.status(500).json({ message: 'Could not update product', error: String(error) });
@@ -172,12 +211,18 @@ router.delete('/:productId', async (req: Request, res: Response) => {
 		}));
 
 		if (!result.Attributes) {
-			return res.status(404).json({ message: `Product ${productId} not found.` });
+
+			return res.status(404).json({ message: "Product not found" });
+		}
+
+		const parsedProduct = ProductSchema.safeParse(result.Attributes);
+		if (!parsedProduct.success) {
+			return res.status(500).json({ message: "Invalid product data" });
 		}
 
 		return res.status(200).json({
-			message: `Product ${productId} deleted successfully`,
-			product: result.Attributes,
+			message: "Goodbye! Product deleted successfully",
+			product: parsedProduct.data,
 		});
 	} catch (error) {
 		console.error("Error deleting product:", error);
