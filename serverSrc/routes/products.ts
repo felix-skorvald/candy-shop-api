@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { GetCommand, QueryCommand, PutCommand, UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { db } from "../data/db.js";
 import { productsData } from "../data/candyProducts.js";
+import { ProductSchema } from "../data/zod.js";
 
 const router: Router = express.Router();
 
@@ -42,15 +43,20 @@ router.get('/:productId', async (req: Request, res: Response) => {
 			}
 		}));
 		
-		if (result.Item) {
-			res.json(result.Item);
-		} else {
-			res.status(404).json({ error: "Product not found" });
+		if (!result.Item) {
+			return res.status(404).json({ message: "Product not found" });
 		}
+		
+		const parsedProduct = ProductSchema.safeParse(result.Item);
+		if (!parsedProduct.success) {
+			return res.status(500).json({ message: "Invalid product data" });
+		}
+		
+		return res.status(200).json(parsedProduct.data);
 		
 	} catch (error) {
 		console.error("Error fetching single product:", error);
-		res.status(500).json({ message: 'Could not fetch product', error: String(error) });
+		res.status(500).json({ message: 'Something went wrong' });
 	}
 });
 
@@ -66,6 +72,14 @@ router.post('/', async (req: Request, res: Response) => {
 			image: req.body.image,
 			AmountInStock: Number(req.body.AmountInStock) 
 		};
+		
+		const validation = ProductSchema.safeParse(product);
+		if (!validation.success) {
+			return res.status(400).json({ 
+				message: "Invalid product data", 
+				errors: validation.error 
+			});
+		}
 		
 		await db.send(new PutCommand({
 			TableName: "CandyShop",
@@ -120,6 +134,7 @@ router.post('/seed', async (req: Request, res: Response) => {
 router.put('/:productId', async (req: Request, res: Response) => {
 	try {
 		const { productId } = req.params;
+		
 		const allowedFields = ['name', 'price', 'image', 'AmountInStock'];
     const updateFields = [];
 	const ExpressionAttributeNames: Record<string, string> = {};
