@@ -1,7 +1,7 @@
 import * as z from "zod";
 
 const idRegex = /^[a-zA-Z0-9#]+$/
-const nameRegex = /^[a-zA-Z0-9\s]+$/
+const nameRegex = /^[a-zA-Z0-9\s\-]+$/;
 const imageUrlRegex = /^https?:\/\/[^\s]+$/i
 
 // Base schema för pk och sk
