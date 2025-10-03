@@ -205,7 +205,7 @@ router.put('/:productId', async (req: Request<ProductIdParam, UpdateProductRespo
 		});
 	} catch (error) {
 		console.error("Error updating product:", error);
-		res.status(500).json({ message: 'Could not update product' });
+		res.status(400).json({ message: 'Could not update product' });
 	}
 });
 
