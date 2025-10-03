@@ -123,11 +123,16 @@ router.put(
     res: Response<UpdateUserResponse | ErrorResponse>
   ) => {
     const userId = req.params.id;
-    const { name } = req.body;
     
     if (!userId) {
       return res.status(400).json({ message: "User ID is required." });
     }
+    
+    if (!req.body) {
+      return res.status(400).json({ message: "Request body is required." });
+    }
+    
+    const { name } = req.body;
     
     if (name === undefined) {
       return res.status(400).json({ message: "Name is required to update." });
