@@ -125,6 +125,10 @@ router.put(
     const userId = req.params.id;
     const { name } = req.body;
     
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required." });
+    }
+    
     if (name === undefined) {
       return res.status(400).json({ message: "Name is required to update." });
     }
@@ -155,10 +159,13 @@ router.put(
         code: error.code  
       });
       
-      if (error.name === "ValidationException" || error.__type?.includes("ValidationException")) {
+      if (error.name === "ConditionalCheckFailedException") {
+        return res.status(404).json({ message: "User not found." });
+      } else if (error.name === "ValidationException" || error.__type?.includes("ValidationException")) {
         return res.status(400).json({ message: error.message || "Invalid request parameters" });
+      } else {
+        return res.status(500).json({ message: "Something went wrong." });
       }
-      
     }
   }
 );
