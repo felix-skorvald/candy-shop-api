@@ -110,7 +110,7 @@ router.post(
       if (error.name === "ConditionalCheckFailedException") {
         return res.status(409).json({ message: "User with this ID already exists" });
       }
-      return res.status(500).json({ message: "Something went wrong" });
+      return res.status(400).json({ message: "Something went wrong" });
     }
   }
 );
