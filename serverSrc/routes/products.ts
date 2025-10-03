@@ -99,13 +99,13 @@ router.post('/', async (
 		}));
 		
 		res.status(201).json({
-			message: "Hi there Dmytro! Product created successfully",
+			message: "Product created successfully",
 			product: product
 		});
 		
 	} catch (error) {
 		console.error("Error creating product:", error);
-		res.status(500).json({ message: 'Could not create product' });
+		res.status(400).json({ message: 'Could not create product' });
 	}
 });
 
