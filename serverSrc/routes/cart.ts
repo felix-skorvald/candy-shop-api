@@ -136,11 +136,6 @@ router.post(
 /**
  * DELETE /api/cart/:userId/:productId
  * Body: none
- * Response: 200 OK <MessageResponse>
- */
-/**
- * DELETE /api/cart/:userId/:productId
- * Body: none
  * Response: 200 OK <{ message: string; deletedItem?: CartObject }>
  */
 router.delete(
