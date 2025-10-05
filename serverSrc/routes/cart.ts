@@ -222,7 +222,7 @@ router.delete(
     }
 );
 
-// DELETE /api/cart/:userId/
+// DELETE /api/cart/:userId
 router.delete(
     "/:userId",
     async (req: Request<{ userId: string }>, res: Response) => {
@@ -253,33 +253,25 @@ router.delete(
                 });
             }
 
-            for (const item of items) {
-                const deleteCommand = new DeleteCommand({
-                    TableName: myTable,
-                    Key: {
-                        pk: item.pk,
-                        sk: item.sk,
-                    },
-                    ConditionExpression:
-                        "attribute_exists(pk) AND attribute_exists(sk)",
-                    ReturnValues: "ALL_OLD",
-                });
+            const deletePromises = items.map((item) =>
+                db.send(
+                    new DeleteCommand({
+                        TableName: myTable,
+                        Key: { pk: item.pk, sk: item.sk },
+                        ConditionExpression:
+                            "attribute_exists(pk) AND attribute_exists(sk)",
+                        ReturnValues: "ALL_OLD",
+                    })
+                )
+            );
 
-                await db.send(deleteCommand);
-            }
+            await Promise.all(deletePromises);
 
             return res.status(200).json({
                 message: `All cart items deleted for user ${userId}`,
                 deletedCount: items.length,
             });
         } catch (error: any) {
-            if (error.name === "ConditionalCheckFailedException") {
-                return res.status(404).json({
-                    message: "No cart items found for this user",
-                    userId,
-                });
-            }
-
             console.error("Error deleting user carts:", error);
             return res.status(500).json({
                 message: "Something went wrong while deleting user carts",
