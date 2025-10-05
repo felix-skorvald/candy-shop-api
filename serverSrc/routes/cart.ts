@@ -138,29 +138,46 @@ router.post(
  * Body: none
  * Response: 200 OK <MessageResponse>
  */
+/**
+ * DELETE /api/cart/:userId/:productId
+ * Body: none
+ * Response: 200 OK <{ message: string; deletedItem?: CartObject }>
+ */
 router.delete(
   "/:userId/:productId",
-  async (req: Request, res: Response<MessageResponse>) => {
+  async (
+    req: Request,
+    res: Response<{ message: string; deletedItem?: CartObject }>
+  ) => {
     const { userId, productId } = req.params;
 
     try {
-      const command = new DeleteCommand({
+      const deleteCommand = new DeleteCommand({
         TableName: "CandyShop",
         Key: {
           pk: "CART",
           sk: `USER#${userId}#PRODUCT#${productId}`,
         },
+        ReturnValues: "ALL_OLD",
       });
 
-      await db.send(command);
+      const result = await db.send(deleteCommand);
+
+      if (!result.Attributes) {
+        return res
+          .status(404)
+          .json({ message: `Cart item for user ${userId} and product ${productId} not found.` });
+      }
+
       return res
         .status(200)
-        .json({ message: "Item deleted from cart" });
+        .json({
+          message: "Item deleted from cart",
+          deletedItem: result.Attributes as CartObject,
+        });
     } catch (error: any) {
       console.error("Error deleting item from cart:", error.message);
-      return res
-        .status(500)
-        .json({ message: "Something went wrong" });
+      return res.status(500).json({ message: "Something went wrong" });
     }
   }
 );
