@@ -54,32 +54,32 @@ interface UpdateResponse {
 }
 
 // GET /api/cart, kanske inte behövs
-router.get(
-    "/",
-    async (req: Request, res: Response<CartItemArray | ErrorResponse>) => {
-        try {
-            const command = new ScanCommand({
-                TableName: myTable,
-                FilterExpression: "pk = :pk",
-                ExpressionAttributeValues: {
-                    ":pk": "CART",
-                },
-            });
+// router.get(
+//     "/",
+//     async (req: Request, res: Response<CartItemArray | ErrorResponse>) => {
+//         try {
+//             const command = new ScanCommand({
+//                 TableName: myTable,
+//                 FilterExpression: "pk = :pk",
+//                 ExpressionAttributeValues: {
+//                     ":pk": "CART",
+//                 },
+//             });
 
-            const result = await db.send(command);
+//             const result = await db.send(command);
 
-            const items: CartItem[] = CartArraySchema.parse(result.Items ?? []);
+//             const items: CartItem[] = CartArraySchema.parse(result.Items ?? []);
 
-            return res.status(200).json(items);
-        } catch (error: any) {
-            console.error("Error fetching all carts:", error.message);
-            return res.status(500).json({
-                message: "Something went wrong",
-                errors: error.message,
-            });
-        }
-    }
-);
+//             return res.status(200).json(items);
+//         } catch (error: any) {
+//             console.error("Error fetching all carts:", error.message);
+//             return res.status(500).json({
+//                 message: "Something went wrong",
+//                 errors: error.message,
+//             });
+//         }
+//     }
+// );
 
 // GET /api/cart/:userId
 router.get(
@@ -140,6 +140,8 @@ router.post(
             const command = new PutCommand({
                 TableName: myTable,
                 Item: parsed,
+                ConditionExpression:
+                    "attribute_not_exists(pk) AND attribute_not_exists(sk)",
             });
 
             await db.send(command);
@@ -152,6 +154,13 @@ router.post(
                 return res.status(400).json({
                     message: "Validation failed",
                     errors: error.errors,
+                });
+            }
+            if (error.name === "ConditionalCheckFailedException") {
+                return res.status(409).json({
+                    message: "Item already exists in cart",
+                    userId: req.body.userId,
+                    productId: req.body.productId,
                 });
             }
             console.error("Error adding item to cart:", error.message);
@@ -185,6 +194,8 @@ router.delete(
                     pk: "CART",
                     sk: `USER#${userId}#PRODUCT#${productId}`,
                 },
+                ConditionExpression:
+                    "attribute_exists(pk) AND attribute_exists(sk)",
             });
 
             await db.send(command);
@@ -194,8 +205,84 @@ router.delete(
                 .json({ message: "Item deleted from cart", userId, productId });
         } catch (error: any) {
             console.error("Error deleting item from cart:", error.message);
+
+            if (error.name === "ConditionalCheckFailedException") {
+                return res.status(404).json({
+                    message: "Item not found in cart",
+                    userId,
+                    productId,
+                });
+            }
+
             return res.status(500).json({
                 message: "Something went wrong",
+                errors: error.message,
+            });
+        }
+    }
+);
+
+// DELETE /api/cart/:userId/
+router.delete(
+    "/:userId",
+    async (req: Request<{ userId: string }>, res: Response) => {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ message: "userId is required" });
+        }
+
+        try {
+            const queryCommand = new QueryCommand({
+                TableName: myTable,
+                KeyConditionExpression:
+                    "pk = :pk AND begins_with(sk, :skPrefix)",
+                ExpressionAttributeValues: {
+                    ":pk": "CART",
+                    ":skPrefix": `USER#${userId}#PRODUCT#`,
+                },
+            });
+
+            const queryResult = await db.send(queryCommand);
+            const items = queryResult.Items || [];
+
+            if (items.length === 0) {
+                return res.status(404).json({
+                    message: "No cart items found for this user",
+                    userId,
+                });
+            }
+
+            for (const item of items) {
+                const deleteCommand = new DeleteCommand({
+                    TableName: myTable,
+                    Key: {
+                        pk: item.pk,
+                        sk: item.sk,
+                    },
+                    ConditionExpression:
+                        "attribute_exists(pk) AND attribute_exists(sk)",
+                    ReturnValues: "ALL_OLD",
+                });
+
+                await db.send(deleteCommand);
+            }
+
+            return res.status(200).json({
+                message: `All cart items deleted for user ${userId}`,
+                deletedCount: items.length,
+            });
+        } catch (error: any) {
+            if (error.name === "ConditionalCheckFailedException") {
+                return res.status(404).json({
+                    message: "No cart items found for this user",
+                    userId,
+                });
+            }
+
+            console.error("Error deleting user carts:", error);
+            return res.status(500).json({
+                message: "Something went wrong while deleting user carts",
                 errors: error.message,
             });
         }
@@ -221,6 +308,8 @@ router.put(
                 ExpressionAttributeValues: {
                     ":newAmount": parsed.amount,
                 },
+                ConditionExpression:
+                    "attribute_exists(pk) AND attribute_exists(sk)",
             });
 
             await db.send(command);
@@ -236,6 +325,15 @@ router.put(
                     errors: error.errors,
                 });
             }
+
+            if (error.name === "ConditionalCheckFailedException") {
+                return res.status(404).json({
+                    message: "Item not found in cart",
+                    userId,
+                    productId,
+                });
+            }
+
             console.error("Error updating cart item:", error.message);
             return res.status(500).json({
                 message: "Something went wrong",
