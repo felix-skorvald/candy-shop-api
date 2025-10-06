@@ -1,4 +1,3 @@
-
 import express from "express";
 import type { Express, RequestHandler } from "express";
 import cartRouter from "./routes/cart.js";
@@ -17,6 +16,7 @@ app.use("/", logger);
 app.use(express.json());
 
 // Endpoints
+app.use("/", express.static("static"));
 app.use("/api/products", productsRouter);
 app.use("/api/users", userRouter);
 app.use("/api/cart", cartRouter);

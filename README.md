@@ -62,13 +62,7 @@ DELETE /api/products/:productId
 
 ## 🛒 Cart
 
-### Get all Cart Items
-
-```bash
-GET /api/cart/
-```
-
-### Get a specific Users Cart
+### Get a Cart
 
 ```bash
 GET /api/cart/:userId
@@ -78,6 +72,31 @@ GET /api/cart/:userId
 
 ```bash
 DELETE /api/cart/:userId/:productId
+```
+
+### Add a Product to a Cart
+
+```bash
+POST /api/cart
+Content-Type: application/json
+
+{
+    "amount": 2,
+    "productId": "23",
+    "userId": "11a1"
+}
+
+```
+
+### Change amount of a Product in Cart
+
+```bash
+PUT /api/cart/:userId/:productId
+Content-Type: application/json
+
+{
+    "amount": 900
+}
 ```
 
 ### Delete a Cart
