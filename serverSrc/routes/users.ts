@@ -4,13 +4,18 @@ import { DeleteCommand, GetCommand, PutCommand, UpdateCommand } from "@aws-sdk/l
 import { UserSchema } from "../data/zod.js";
 import { QueryCommand } from "@aws-sdk/lib-dynamodb"
 import type { IdParam, User, CreateUserBody, CreateUserResponse, UpdateUserResponse, DeleteUserResponse, ErrorResponse } from "../data/types.js"
+import * as z from "zod";
+import { nameRegex } from "../data/zod.js";
 
 const router: Router = express.Router();
 const myTable = "CandyShop";
 
-
-
 type UpdateUserBody = Partial<Pick<User, "name">>;
+
+const UpdateUserSchema = z.object({
+  name: z.string().min(2).max(50).regex(nameRegex),
+})
+
 
 
 // Get ALL users
@@ -110,7 +115,7 @@ router.post(
       if (error.name === "ConditionalCheckFailedException") {
         return res.status(409).json({ message: "User with this ID already exists" });
       }
-      return res.status(500).json({ message: "Something went wrong" });
+      return res.status(400).json({ message: "Something went wrong" });
     }
   }
 );
@@ -123,13 +128,26 @@ router.put(
     res: Response<UpdateUserResponse | ErrorResponse>
   ) => {
     const userId = req.params.id;
-    const { name } = req.body;
     
-    if (name === undefined) {
-      return res.status(400).json({ message: "Name is required to update." });
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required." });
+    }
+    
+    if (!req.body) {
+      return res.status(400).json({ message: "Request body is required." });
     }
     
     try {
+      const validation = UpdateUserSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({
+          message: "Invalid update data",
+          errors: validation.error,
+        });
+      }
+
+      const { name } = validation.data;
+      
       const params = {
         TableName: myTable,
         Key: { pk: "USER", sk: `USER#${userId}` },
@@ -155,10 +173,13 @@ router.put(
         code: error.code  
       });
       
-      if (error.name === "ValidationException" || error.__type?.includes("ValidationException")) {
+      if (error.name === "ConditionalCheckFailedException") {
+        return res.status(404).json({ message: "User not found." });
+      } else if (error.name === "ValidationException" || error.__type?.includes("ValidationException")) {
         return res.status(400).json({ message: error.message || "Invalid request parameters" });
+      } else {
+        return res.status(500).json({ message: "Something went wrong." });
       }
-      
     }
   }
 );
