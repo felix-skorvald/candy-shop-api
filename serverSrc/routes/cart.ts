@@ -129,6 +129,12 @@ router.post(
         res: Response<CartItem | ErrorResponse>
     ) => {
         try {
+            if (!req.body) {
+                return res.status(400).json({
+                    message: "Request body is required",
+                });
+            }
+
             const parsed = CartSchema.parse({
                 pk: "CART",
                 sk: `USER#${req.body.userId}#PRODUCT#${req.body.productId}`,
@@ -150,6 +156,13 @@ router.post(
                 .status(201)
                 .json({ message: "Item added to cart", ...parsed });
         } catch (error: any) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({
+                    message: "Validation failed",
+                    errors: error,
+                });
+            }
+
             if (error.errors) {
                 return res.status(400).json({
                     message: "Validation failed",
@@ -288,6 +301,12 @@ router.put(
         const { userId, productId } = req.params;
 
         try {
+            if (!req.body) {
+                return res.status(400).json({
+                    message: "Request body is required",
+                });
+            }
+
             const parsed = UpdateCartSchema.parse(req.body);
 
             const command = new UpdateCommand({
@@ -311,6 +330,12 @@ router.put(
                 parsed, // Kanske borde visa Item istället?
             });
         } catch (error: any) {
+            if (error instanceof z.ZodError) {
+                return res.status(400).json({
+                    message: "Validation failed",
+                    errors: error,
+                });
+            }
             if (error.errors) {
                 return res.status(400).json({
                     message: "Validation failed",
